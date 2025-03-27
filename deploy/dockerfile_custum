@@ -1,0 +1,27 @@
+#Stage 1: Building the Python environment and installing dependencies
+FROM python:3.12-slim AS tpey
+# Ajouter les outils nécessaires à la compilation
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    python3-dev \
+    libffi-dev \
+    && python -m ensurepip --upgrade \
+    && pip install --no-cache --upgrade pip setuptools wheel
+
+WORKDIR /app
+COPY ../application/requirements.txt .
+
+# Installer les dépendances Python
+RUN pip install --no-cache-dir -r requirements.txt
+COPY ../application/ .
+
+# Stage 2 : build light Image
+FROM python:3.12-slim AS finalstage
+WORKDIR /app
+# Copy only installed dependencies from previous step
+COPY --from=tpey /usr/local/lib/python3.12/site-packages/ /usr/local/lib/python3.12/site-packages/
+COPY --from=tpey /usr/local/bin/ /usr/local/bin/
+# Copy application source code only
+COPY --from=tpey /app/ .
+# Commande to launch
+CMD ["python", "main.py"]
